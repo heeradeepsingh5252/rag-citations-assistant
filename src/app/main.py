@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-
 from src.app.config import APP_NAME
 
 app = FastAPI(title=APP_NAME)
