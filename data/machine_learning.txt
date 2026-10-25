@@ -1,0 +1,11 @@
+Machine Learning Basics
+
+Machine learning is a branch of artificial intelligence that enables computers to learn patterns from data and make predictions without being explicitly programmed for every task.
+
+Supervised learning uses labeled training data. Common examples include predicting house prices, detecting spam emails, and classifying images.
+
+Unsupervised learning discovers patterns in unlabeled data. It is commonly used for customer segmentation and anomaly detection.
+
+Model evaluation measures how well a machine learning model performs. Accuracy, precision, recall, F1 score, mean absolute error, and root mean squared error are common evaluation metrics.
+
+Overfitting happens when a model learns the training data too closely and performs poorly on unseen data. Techniques such as cross-validation, regularization, and collecting more training data can help reduce overfitting.
