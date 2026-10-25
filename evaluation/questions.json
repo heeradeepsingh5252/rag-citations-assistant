@@ -1,0 +1,44 @@
+[
+  {
+    "id": "Q1",
+    "question": "What is machine learning?",
+    "expected_answer": "Machine learning enables computers to learn patterns from data and make predictions without being explicitly programmed for every task.",
+    "expected_evidence": "learn patterns from data and make predictions",
+    "topic": "machine_learning_basics"
+  },
+  {
+    "id": "Q2",
+    "question": "What is supervised learning, and what is one example?",
+    "expected_answer": "Supervised learning uses labeled training data. Examples include predicting house prices, detecting spam emails, and classifying images.",
+    "expected_evidence": "labeled training data",
+    "topic": "supervised_learning"
+  },
+  {
+    "id": "Q3",
+    "question": "What is unsupervised learning used for?",
+    "expected_answer": "Unsupervised learning discovers patterns in unlabeled data and is commonly used for customer segmentation and anomaly detection.",
+    "expected_evidence": "unlabeled data",
+    "topic": "unsupervised_learning"
+  },
+  {
+    "id": "Q4",
+    "question": "Which metrics are used to evaluate machine learning models?",
+    "expected_answer": "Common metrics include accuracy, precision, recall, F1 score, mean absolute error, and root mean squared error.",
+    "expected_evidence": "accuracy, precision, recall, F1 score",
+    "topic": "model_evaluation"
+  },
+  {
+    "id": "Q5",
+    "question": "What is overfitting, and how can it be reduced?",
+    "expected_answer": "Overfitting occurs when a model learns training data too closely and performs poorly on unseen data. Cross-validation, regularization, and collecting more training data can help reduce it.",
+    "expected_evidence": "performs poorly on unseen data",
+    "topic": "overfitting"
+  },
+  {
+    "id": "Q6",
+    "question": "What is the capital of Japan?",
+    "expected_answer": "The answer should not be available in the supplied document.",
+    "expected_evidence": "",
+    "topic": "out_of_scope"
+  }
+]
