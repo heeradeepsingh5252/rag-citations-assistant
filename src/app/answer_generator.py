@@ -70,8 +70,10 @@ def generate_answer(question: str, chunks: list[dict]) -> str:
 
     def validate_citation(match: re.Match) -> str:
         citation_number = int(match.group(1))
+
         if 1 <= citation_number <= max_citation:
             return match.group(0)
+
         return ""
 
     answer = re.sub(r"\[(\d+)\]", validate_citation, answer)
