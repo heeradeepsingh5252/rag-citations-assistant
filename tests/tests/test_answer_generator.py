@@ -1,3 +1,4 @@
+
 from types import SimpleNamespace
 
 import pytest
@@ -7,6 +8,7 @@ from src.app.answer_generator import generate_answer
 
 def test_empty_chunks_return_fallback_message():
     answer = generate_answer("What is machine learning?", [])
+
     assert "couldn't find relevant information" in answer
 
 
@@ -53,7 +55,9 @@ def test_generate_answer_uses_mocked_groq(monkeypatch):
     class FakeGroq:
         def __init__(self, api_key):
             assert api_key == "test-key"
-            self.chat = SimpleNamespace(completions=FakeCompletions())
+            self.chat = SimpleNamespace(
+                completions=FakeCompletions()
+            )
 
     monkeypatch.setattr(answer_generator, "Groq", FakeGroq)
 
@@ -66,14 +70,17 @@ def test_generate_answer_uses_mocked_groq(monkeypatch):
         }
     ]
 
-    answer = answer_generator.generate_answer(
+    answer = generate_answer(
         "What is supervised learning?",
         chunks,
     )
 
     assert answer == "Supervised learning uses labeled data. [1]"
     assert captured["model"] == "test-model"
-    assert "Supervised learning uses labeled data." in (captured["messages"][1]["content"])
+    assert (
+        "Supervised learning uses labeled data."
+        in captured["messages"][1]["content"]
+    )
 
 
 def test_invalid_citation_numbers_are_removed(monkeypatch):
@@ -86,7 +93,9 @@ def test_invalid_citation_numbers_are_removed(monkeypatch):
                 choices=[
                     SimpleNamespace(
                         message=SimpleNamespace(
-                            content="Supervised learning uses labeled data. [1] [7]"
+                            content=(
+                                "Supervised learning uses labeled data. [1] [7]"
+                            )
                         )
                     )
                 ]
@@ -94,7 +103,9 @@ def test_invalid_citation_numbers_are_removed(monkeypatch):
 
     class FakeGroq:
         def __init__(self, api_key):
-            self.chat = SimpleNamespace(completions=FakeCompletions())
+            self.chat = SimpleNamespace(
+                completions=FakeCompletions()
+            )
 
     monkeypatch.setattr(answer_generator, "Groq", FakeGroq)
 
@@ -126,8 +137,10 @@ def test_multiple_valid_and_invalid_citations(monkeypatch):
                 choices=[
                     SimpleNamespace(
                         message=SimpleNamespace(
-                            content="Supervised learning uses labeled data [1]. "
-                            "It is always faster than unsupervised learning [9]."
+                            content=(
+                                "Supervised learning uses labeled data [1]. "
+                                "It is always faster than unsupervised learning [9]."
+                            )
                         )
                     )
                 ]
@@ -135,7 +148,9 @@ def test_multiple_valid_and_invalid_citations(monkeypatch):
 
     class FakeGroq:
         def __init__(self, api_key):
-            self.chat = SimpleNamespace(completions=FakeCompletions())
+            self.chat = SimpleNamespace(
+                completions=FakeCompletions()
+            )
 
     monkeypatch.setattr(answer_generator, "Groq", FakeGroq)
 
@@ -148,10 +163,110 @@ def test_multiple_valid_and_invalid_citations(monkeypatch):
         }
     ]
 
-    answer = answer_generator.generate_answer(
+    answer = generate_answer(
         "What is supervised learning?",
         chunks,
     )
 
     assert "[1]" in answer
     assert "[9]" not in answer
+
+
+def test_invalid_citation_removal_does_not_verify_claim_support(
+    monkeypatch,
+):
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    monkeypatch.setenv("GROQ_MODEL", "test-model")
+
+    class FakeCompletions:
+        def create(self, **kwargs):
+            return SimpleNamespace(
+                choices=[
+                    SimpleNamespace(
+                        message=SimpleNamespace(
+                            content=(
+                                "Supervised learning uses labeled data [1]. "
+                                "It is always faster than unsupervised learning [9]."
+                            )
+                        )
+                    )
+                ]
+            )
+
+    class FakeGroq:
+        def __init__(self, api_key):
+            self.chat = SimpleNamespace(
+                completions=FakeCompletions()
+            )
+
+    monkeypatch.setattr(answer_generator, "Groq", FakeGroq)
+
+    chunks = [
+        {
+            "filename": "machine_learning.txt",
+            "page": 1,
+            "chunk_id": 1,
+            "text": "Supervised learning uses labeled training data.",
+        }
+    ]
+
+    answer = generate_answer(
+        "What is supervised learning?",
+        chunks,
+    )
+
+    # Documents the current limitation:
+    # citation numbers are checked, but claim support is not.
+    assert "[9]" not in answer
+    assert "always faster than unsupervised learning" in answer
+
+
+def test_generation_includes_strict_grounding_instructions(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    monkeypatch.setenv("GROQ_MODEL", "test-model")
+
+    captured = {}
+
+    class FakeCompletions:
+        def create(self, **kwargs):
+            captured.update(kwargs)
+            return SimpleNamespace(
+                choices=[
+                    SimpleNamespace(
+                        message=SimpleNamespace(
+                            content="Supervised learning uses labeled data. [1]"
+                        )
+                    )
+                ]
+            )
+
+    class FakeGroq:
+        def __init__(self, api_key):
+            self.chat = SimpleNamespace(
+                completions=FakeCompletions()
+            )
+
+    monkeypatch.setattr(answer_generator, "Groq", FakeGroq)
+
+    chunks = [
+        {
+            "filename": "machine_learning.txt",
+            "page": 1,
+            "chunk_id": 1,
+            "text": "Supervised learning uses labeled training data.",
+        }
+    ]
+
+    generate_answer(
+        "What is supervised learning?",
+        chunks,
+    )
+
+    system_prompt = captured["messages"][0]["content"]
+
+    assert "explicitly supported by the supplied context" in system_prompt
+    assert (
+        "Never invent citations, facts, comparisons, or causal claims"
+        in system_prompt
+    )
+    assert "directly supports that claim" in system_prompt

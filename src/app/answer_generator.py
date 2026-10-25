@@ -33,7 +33,7 @@ def generate_answer(question: str, chunks: list[dict]) -> str:
             "GROQ_API_KEY is missing. Add it to your local .env file."
         )
 
-    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    model = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
     client = Groq(api_key=api_key)
 
     response = client.chat.completions.create(
@@ -43,10 +43,20 @@ def generate_answer(question: str, chunks: list[dict]) -> str:
                 "role": "system",
                 "content": (
                     "You are a document question-answering assistant. "
-                    "Answer using only the supplied context. "
-                    "If the context does not contain the answer, say so. "
-                    "Cite supporting passages using their bracketed numbers, "
-                    "such as [1] or [2]. Never invent citations."
+                    "Answer using only information explicitly supported by "
+                    "the supplied context. "
+                    "If the context does not contain enough evidence to "
+                    "answer, say so clearly. "
+                    "Attach a citation to each factual claim, using the "
+                    "bracketed number of the passage that directly supports "
+                    "that claim, such as [1] or [2]. "
+                    "Do not cite a passage merely because it discusses a "
+                    "similar topic. "
+                    "Never invent citations, facts, comparisons, or causal "
+                    "claims. "
+                    "If only part of a question can be answered from the "
+                    "context, answer that part and clearly state what the "
+                    "context does not establish."
                 ),
             },
             {
