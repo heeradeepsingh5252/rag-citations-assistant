@@ -5,6 +5,10 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from src.app.answer_generator import generate_answer
 from src.app.chunker import chunk_pages
+from src.app.citation_verifier import (
+    check_claim_support,
+    get_cited_chunks,
+)
 from src.app.config import APP_NAME
 from src.app.document_loader import DocumentIngestionError, extract_document
 from src.app.search import search_chunks
@@ -79,10 +83,14 @@ def query_documents(request: QueryRequest) -> dict:
             "result_count": 0,
             "results": [],
             "citations": [],
-            "message": "No documents indexed yet. Upload a PDF or TXT file first.",
+            "verification": [],
+            "message": (
+                "No documents indexed yet. Upload a PDF or TXT file first."
+            ),
         }
 
     results = search_chunks(question, chunks, top_k=request.top_k)
+
 
     cited_results = []
     citations = []
@@ -103,8 +111,22 @@ def query_documents(request: QueryRequest) -> dict:
         )
         citations.append(citation)
 
+    if not cited_results:
+        return {
+            "question": question,
+            "answer": (
+                "I couldn't find relevant information in the uploaded "
+                "documents."
+            ),
+            "result_count": 0,
+            "results": [],
+            "citations": [],
+            "verification": [],
+        }
+
     try:
         answer = generate_answer(question, cited_results)
+
     except RuntimeError as exc:
         raise HTTPException(
             status_code=503,
@@ -119,10 +141,31 @@ def query_documents(request: QueryRequest) -> dict:
             ),
         ) from exc
 
+    cited_chunks = get_cited_chunks(answer, cited_results)
+    verification = []
+
+    for item in cited_chunks:
+        citation_number = item["citation_number"]
+        chunk = item["chunk"]
+
+        verification.append(
+            {
+                "citation_id": citation_number,
+                "source": chunk["filename"],
+                "page": chunk["page"],
+                "status": check_claim_support(
+                    answer,
+                    chunk["text"],
+                ),
+                "method": "lexical_heuristic",
+            }
+        )
+
     return {
         "question": question,
         "answer": answer,
         "result_count": len(cited_results),
         "results": cited_results,
         "citations": citations,
+        "verification": verification,
     }

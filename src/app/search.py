@@ -36,6 +36,7 @@ def search_chunks(
     chunk_embeddings = embed_texts(texts)
     query_embedding = embed_query(query)
 
+
     # Normalized embeddings make dot product equal cosine similarity.
     scored_chunks = []
 

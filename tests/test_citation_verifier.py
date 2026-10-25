@@ -78,3 +78,16 @@ def test_contradictory_source_is_not_confirmed_as_support():
     assert check_claim_support(
         claim, source
     ) == "insufficient_evidence"
+
+
+
+def test_negation_mismatch_is_not_possible_support():
+    claim = "Supervised learning uses labeled training data"
+    source = (
+        "Supervised learning does not use labeled "
+        "training data."
+    )
+
+    result = check_claim_support(claim, source)
+
+    assert result == "insufficient_evidence"
