@@ -50,7 +50,7 @@ def search_chunks(
     scored_chunks.sort(key=lambda item: item["score"], reverse=True)
 
     # Filter chunks that fall below the minimum relevance threshold.
-    min_score = 0.20
+    min_score = 0.65
     relevant_chunks = [
         chunk for chunk in scored_chunks
         if chunk["score"] >= min_score

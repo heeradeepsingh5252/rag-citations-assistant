@@ -40,5 +40,68 @@
     "expected_answer": "The answer should not be available in the supplied document.",
     "expected_evidence": "",
     "topic": "out_of_scope"
+  },
+  {
+    "id": "Q7",
+    "question": "What is the boiling point of water at sea level?",
+    "expected_answer": "The answer is not available in the supplied document.",
+    "expected_evidence": "",
+    "topic": "out_of_scope"
+  },
+  {
+    "id": "Q8",
+    "question": "Who wrote the play Hamlet?",
+    "expected_answer": "The answer is not available in the supplied document.",
+    "expected_evidence": "",
+    "topic": "out_of_scope"
+  },
+  {
+    "id": "Q9",
+    "question": "How do I make sourdough bread?",
+    "expected_answer": "The answer is not available in the supplied document.",
+    "expected_evidence": "",
+    "topic": "out_of_scope"
+  },
+  {
+    "id": "Q10",
+    "question": "Which planet is closest to the Sun?",
+    "expected_answer": "The answer is not available in the supplied document.",
+    "expected_evidence": "",
+    "topic": "out_of_scope"
+  },
+  {
+    "id": "Q11",
+    "question": "How does gradient descent optimize a machine learning model?",
+    "expected_answer": "The answer is not available in the supplied document.",
+    "expected_evidence": "",
+    "topic": "out_of_scope"
+  },
+  {
+    "id": "Q12",
+    "question": "How do convolutional neural networks classify images?",
+    "expected_answer": "The answer is not available in the supplied document.",
+    "expected_evidence": "",
+    "topic": "out_of_scope"
+  },
+  {
+    "id": "Q13",
+    "question": "What is backpropagation in deep learning?",
+    "expected_answer": "The answer is not available in the supplied document.",
+    "expected_evidence": "",
+    "topic": "out_of_scope"
+  },
+  {
+    "id": "Q14",
+    "question": "How do I deploy a trained machine learning model as a REST API?",
+    "expected_answer": "The answer is not available in the supplied document.",
+    "expected_evidence": "",
+    "topic": "out_of_scope"
+  },
+  {
+    "id": "Q15",
+    "question": "What is the difference between random forests and support vector machines?",
+    "expected_answer": "The answer is not available in the supplied document.",
+    "expected_evidence": "",
+    "topic": "out_of_scope"
   }
 ]

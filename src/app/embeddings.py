@@ -1,3 +1,4 @@
+
 import math
 import os
 from functools import lru_cache
@@ -82,9 +83,26 @@ def _embed(
     return _normalize_embeddings(raw_embeddings)
 
 
+@lru_cache(maxsize=16)
+def _cached_document_embeddings(
+    texts: tuple[str, ...],
+) -> tuple[tuple[float, ...], ...]:
+    """Cache document embeddings for identical batches of text."""
+    vectors = _embed(list(texts), "RETRIEVAL_DOCUMENT")
+
+    # Store immutable tuples inside the cache.
+    return tuple(tuple(vector) for vector in vectors)
+
+
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    """Generate embeddings for document chunks."""
-    return _embed(texts, "RETRIEVAL_DOCUMENT")
+    """Generate and cache embeddings for document chunks."""
+    if not texts:
+        return []
+
+    cached_vectors = _cached_document_embeddings(tuple(texts))
+
+    # Return fresh lists so callers cannot mutate cached vectors.
+    return [list(vector) for vector in cached_vectors]
 
 
 def embed_query(query: str) -> list[float]:
