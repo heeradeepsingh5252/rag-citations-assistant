@@ -1,7 +1,9 @@
-
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from src.app.answer_generator import generate_answer
 from src.app.chunker import chunk_pages
@@ -15,6 +17,14 @@ from src.app.search import search_chunks
 from src.app.store import get_chunks, save_chunks
 
 app = FastAPI(title=APP_NAME)
+STATIC_DIR = Path(__file__).resolve().parents[2] / "static"
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.get("/", include_in_schema=False)
+def home() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 class QueryRequest(BaseModel):

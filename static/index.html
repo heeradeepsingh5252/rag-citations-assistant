@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Ask questions about your documents and inspect retrieved passages and citations." />
+  <title>RAG Citations Assistant</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1020;
+      --panel: #131a2b;
+      --panel2: #192237;
+      --border: #2a354c;
+      --text: #eef2ff;
+      --muted: #9ba8c0;
+      --accent: #8b9dff;
+      --accent2: #b8c3ff;
+      --green: #8de0bd;
+      --red: #ffaaaa;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(ellipse at top left, #1b2550 0, transparent 42%),
+        var(--bg);
+      color: var(--text);
+      font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI",
+            sans-serif;
+      min-height: 100vh;
+    }
+
+    button, input, textarea, select { font: inherit; }
+
+    .container {
+      width: min(1040px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 42px 0 56px;
+    }
+
+    header { margin-bottom: 30px; }
+
+    .eyebrow {
+      color: var(--accent2);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: clamp(30px, 5vw, 45px);
+      line-height: 1.12;
+      letter-spacing: -.04em;
+      margin: 10px 0;
+    }
+
+    header p, .muted { color: var(--muted); }
+
+    header p { max-width: 650px; margin: 0; }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 12px #8de0bd55;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: #131a2beF;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 23px;
+      box-shadow: 0 16px 45px #00000015;
+    }
+
+    h2 { font-size: 18px; margin: 0 0 5px; }
+    .description { font-size: 13px; color: var(--muted); margin: 0 0 21px; }
+
+    label {
+      display: block;
+      margin: 16px 0 7px;
+      font-size: 13px;
+      color: #d7dff2;
+      font-weight: 600;
+    }
+
+    input[type="file"], textarea, select {
+      width: 100%;
+      background: #0d1424;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    input[type="file"] {
+      font-size: 12px;
+      padding: 10px;
+    }
+
+    textarea { resize: vertical; min-height: 112px; }
+    input:focus, textarea:focus, select:focus {
+      outline: 2px solid #8b9dff75;
+      border-color: var(--accent);
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #10152a;
+      font-weight: 750;
+      padding: 12px 15px;
+      width: 100%;
+      margin-top: 14px;
+      transition: filter .15s, transform .15s;
+    }
+
+    button:hover { filter: brightness(1.08); }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: .55; cursor: wait; }
+
+    .secondary {
+      background: var(--panel2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .message {
+      display: none;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      margin-top: 14px;
+      border-radius: 10px;
+      padding: 11px 12px;
+      font-size: 13px;
+    }
+
+    .message.show { display: block; }
+    .message.info { color: #dce3ff; background: #253158; }
+    .message.success { color: #b7f4d7; background: #15352f; }
+    .message.error { color: #ffc0c0; background: #3b202b; }
+
+    .upload-meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .right { display: grid; gap: 18px; min-width: 0; }
+
+    .answer {
+      font-size: 16px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      margin: 14px 0 0;
+    }
+
+    .empty {
+      min-height: 150px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      padding: 20px;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+    }
+
+    .results { display: grid; gap: 10px; margin-top: 14px; }
+
+    .result {
+      padding: 14px;
+      border-radius: 12px;
+      background: #0d1424;
+      border: 1px solid var(--border);
+      min-width: 0;
+    }
+
+    .result-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .score { color: var(--accent2); }
+
+    .result-text {
+      margin-top: 9px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+      color: #d5def1;
+    }
+
+    .pill {
+      display: inline-block;
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 3px 9px;
+      font-size: 11px;
+      margin-top: 8px;
+      color: var(--green);
+    }
+
+    .footnote {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 17px;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      margin-top: 24px;
+      padding-top: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    footer a { color: var(--accent2); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 760px) {
+      .container { padding-top: 26px; }
+      .layout { grid-template-columns: 1fr; }
+      .panel { padding: 19px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header>
+      <div class="eyebrow">Document intelligence · RAG demo</div>
+      <h1>RAG Citations Assistant</h1>
+      <p>
+        Upload a document, ask a question, and explore the passages behind
+        the answer. Responses include source citations and a lightweight
+        evidence check.
+      </p>
+      <div class="status">
+        <span class="dot"></span>
+        <span>Connected to the document question-answering API</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel">
+        <h2>01 · Add a document</h2>
+        <p class="description">Choose a PDF or TXT file to index for this session.</p>
+
+        <form id="upload-form">
+          <label for="file">Document file</label>
+          <input id="file" name="file" type="file"
+                 accept=".pdf,.txt,application/pdf,text/plain" required />
+          <button id="upload-button" type="submit">Upload and index</button>
+        </form>
+
+        <div id="upload-message" class="message" role="status" aria-live="polite"></div>
+        <div id="upload-meta" class="upload-meta">
+          No document uploaded in this session.
+        </div>
+
+        <div class="footnote">
+          Note: documents are stored in memory by the current backend.
+          Upload your document again after a server restart.
+        </div>
+      </aside>
+
+      <div class="right">
+        <section class="panel">
+          <h2>02 · Ask a question</h2>
+          <p class="description">Ask something that your uploaded document can answer.</p>
+
+          <form id="query-form">
+            <label for="question">Your question</label>
+            <textarea id="question" maxlength="1000"
+              placeholder="What is supervised learning?" required></textarea>
+
+            <label for="top-k">Maximum passages to retrieve</label>
+            <select id="top-k">
+              <option value="1">1 passage</option>
+              <option value="2">2 passages</option>
+              <option value="3" selected>3 passages</option>
+              <option value="5">5 passages</option>
+              <option value="10">10 passages</option>
+            </select>
+
+            <button id="ask-button" type="submit">Generate answer</button>
+          </form>
+          <div id="query-message" class="message" role="status" aria-live="polite"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Answer</h2>
+          <div id="answer-area" class="empty">
+            Your answer will appear here after you ask a question.
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Sources and verification</h2>
+          <p class="description">
+            Inspect the retrieved text, similarity scores, and citation status.
+          </p>
+          <div id="sources-area" class="empty">
+            Retrieved passages will appear here.
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <footer>
+      <span>Built with FastAPI, Gemini embeddings, and Groq.</span>
+      <a href="/docs" target="_blank" rel="noreferrer">API documentation ↗</a>
+      <a href="/health" target="_blank" rel="noreferrer">Health check ↗</a>
+      <a href="https://github.com/heeradeepsingh5252/rag-citations-assistant"
+         target="_blank" rel="noreferrer">Source code ↗</a>
+    </footer>
+  </main>
+
+  <script>
+    const uploadForm = document.getElementById("upload-form");
+    const queryForm = document.getElementById("query-form");
+    const fileInput = document.getElementById("file");
+    const uploadButton = document.getElementById("upload-button");
+    const askButton = document.getElementById("ask-button");
+    const uploadMessage = document.getElementById("upload-message");
+    const queryMessage = document.getElementById("query-message");
+    const uploadMeta = document.getElementById("upload-meta");
+    const answerArea = document.getElementById("answer-area");
+    const sourcesArea = document.getElementById("sources-area");
+
+    function showMessage(element, text, type) {
+      element.textContent = text;
+      element.className = `message show ${type}`;
+    }
+
+    function clearMessage(element) {
+      element.textContent = "";
+      element.className = "message";
+    }
+
+    function makeElement(tag, className, text) {
+      const element = document.createElement(tag);
+      if (className) element.className = className;
+      if (text !== undefined) element.textContent = text;
+      return element;
+    }
+
+    function resetResults() {
+      answerArea.className = "empty";
+      answerArea.textContent = "Your answer will appear here after you ask a question.";
+      sourcesArea.className = "empty";
+      sourcesArea.textContent = "Retrieved passages will appear here.";
+    }
+
+    uploadForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearMessage(uploadMessage);
+
+      const file = fileInput.files[0];
+      if (!file) {
+        showMessage(uploadMessage, "Choose a PDF or TXT file first.", "error");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+      uploadButton.disabled = true;
+      uploadButton.textContent = "Uploading…";
+      showMessage(uploadMessage, "Uploading and extracting document text…", "info");
+
+      try {
+        const response = await fetch("/documents/ingest", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.detail || "The document upload failed.");
+        }
+
+        showMessage(
+          uploadMessage,
+          "Document uploaded and indexed successfully.",
+          "success"
+        );
+
+        uploadMeta.textContent =
+          `${data.filename} · ${data.page_count} page(s) · ` +
+          `${data.chunk_count} chunk(s)`;
+
+        resetResults();
+      } catch (error) {
+        showMessage(
+          uploadMessage,
+          `${error.message}\nCheck that the API is live and try again.`,
+          "error"
+        );
+      } finally {
+        uploadButton.disabled = false;
+        uploadButton.textContent = "Upload and index";
+      }
+    });
+
+    queryForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearMessage(queryMessage);
+
+      const question = document.getElementById("question").value.trim();
+      const topK = Number(document.getElementById("top-k").value);
+
+      if (!question) {
+        showMessage(queryMessage, "Enter a question first.", "error");
+        return;
+      }
+
+      askButton.disabled = true;
+      askButton.textContent = "Generating…";
+      showMessage(queryMessage, "Retrieving passages and generating an answer…", "info");
+
+      try {
+        const response = await fetch("/documents/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question, top_k: topK })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.detail || `Request failed (${response.status}).`);
+        }
+
+        answerArea.className = "";
+        answerArea.replaceChildren();
+
+        if (data.answer) {
+          answerArea.appendChild(makeElement("p", "answer", data.answer));
+        } else {
+          answerArea.appendChild(
+            makeElement("p", "muted", data.message || "No answer was generated.")
+          );
+        }
+
+        sourcesArea.className = "";
+        sourcesArea.replaceChildren();
+
+        const results = data.results || [];
+        const citations = data.citations || [];
+        const verification = data.verification || [];
+
+        if (results.length === 0) {
+          sourcesArea.appendChild(
+            makeElement(
+              "div",
+              "empty",
+              data.message || "No relevant passages were retrieved."
+            )
+          );
+        }
+
+        for (const result of results) {
+          const card = makeElement("article", "result");
+          const head = makeElement("div", "result-head");
+          const citationId = result.citation_id;
+          const citation = citations.find(
+            item => item.citation_id === citationId
+          );
+          const check = verification.find(
+            item => item.citation_id === citationId
+          );
+
+          head.appendChild(makeElement(
+            "span",
+            "",
+            `Citation [${citationId ?? "?"}] · ${result.filename || "Unknown source"} · Page ${result.page ?? "?"}`
+          ));
+
+          head.appendChild(makeElement(
+            "span",
+            "score",
+            `Similarity: ${Number(result.score || 0).toFixed(3)}`
+          ));
+
+          card.appendChild(head);
+          card.appendChild(makeElement("p", "result-text", result.text || ""));
+
+          if (citation) {
+            card.appendChild(makeElement(
+              "div",
+              "pill",
+              `Source citation [${citation.citation_id}]`
+            ));
+          }
+
+          if (check) {
+            card.appendChild(makeElement(
+              "div",
+              "pill",
+              `Verification: ${check.status} · ${check.method}`
+            ));
+          }
+
+          sourcesArea.appendChild(card);
+        }
+
+        const warning =
+          "Verification is a lexical heuristic, not proof of factual correctness.";
+        showMessage(
+          queryMessage,
+          `${data.result_count ?? results.length} passage(s) retrieved. ${warning}`,
+          "success"
+        );
+      } catch (error) {
+        showMessage(
+          queryMessage,
+          `${error.message}\nIf the service restarted, upload your document again.`,
+          "error"
+        );
+      } finally {
+        askButton.disabled = false;
+        askButton.textContent = "Generate answer";
+      }
+    });
+  </script>
+</body>
+</html>
