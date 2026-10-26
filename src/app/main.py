@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -16,6 +16,7 @@ from src.app.citation_verifier import (
 )
 from src.app.config import APP_NAME
 from src.app.document_loader import DocumentIngestionError, extract_document
+from src.app.rate_limit import enforce_rate_limit
 from src.app.search import search_chunks
 from src.app.store import get_chunks, save_chunks
 
@@ -96,8 +97,18 @@ def health() -> dict:
 
 
 @app.post("/documents/ingest")
-async def ingest_document(file: Annotated[UploadFile, File()]) -> dict:
+async def ingest_document(
+    http_request: Request,
+    file: Annotated[UploadFile, File()],
+) -> dict:
     """Extract an uploaded PDF or TXT document and store its chunks."""
+    enforce_rate_limit(
+        http_request,
+        scope="upload",
+        limit=5,
+        window_seconds=60,
+    )
+
     filename = file.filename or ""
 
     if not filename.lower().endswith((".pdf", ".txt")):
@@ -138,7 +149,16 @@ async def ingest_document(file: Annotated[UploadFile, File()]) -> dict:
 
 
 @app.post("/documents/query")
-def query_documents(request: QueryRequest) -> dict:
+def query_documents(
+    http_request: Request,
+    request: QueryRequest,
+) -> dict:
+    enforce_rate_limit(
+        http_request,
+        scope="query",
+        limit=10,
+        window_seconds=60,
+    )
     """Retrieve relevant chunks and generate a cited answer."""
     question = request.question.strip()
 
