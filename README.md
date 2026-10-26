@@ -13,6 +13,14 @@ Built with Python, FastAPI, Google Gemini Embedding API, and Groq. Deployed on R
 
 The free hosting tier may take longer to respond after inactivity. The sample document is preloaded at startup when the in-memory store is empty. Uploaded documents are stored in memory and may need to be uploaded again after a server restart.
 
+## Screenshots
+
+<p align="center">
+  <img src="assets/rag-citations-interface-1.png" width="32%" alt="RAG Citations Assistant main interface">
+  <img src="assets/rag-citations-interface-2.png" width="32%" alt="RAG Citations Assistant question and answer interface">
+  <img src="assets/rag-citations-interface-3.png" width="32%" alt="RAG Citations Assistant additional interface view">
+</p>
+
 ## Features
 
 - **Document ingestion:** Upload PDF and TXT documents through the web interface or REST API.
