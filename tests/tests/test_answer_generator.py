@@ -270,3 +270,60 @@ def test_generation_includes_strict_grounding_instructions(monkeypatch):
         in system_prompt
     )
     assert "directly supports that claim" in system_prompt
+
+
+@pytest.mark.parametrize(
+    ("model_answer", "expected"),
+    [
+        (
+            "Supervised learning uses labeled data【1】.",
+            "Supervised learning uses labeled data[1].",
+        ),
+        (
+            "Supervised learning uses labeled data【1†L3-L5】.",
+            "Supervised learning uses labeled data[1].",
+        ),
+        (
+            "Supported claim【1†L3-L5】; unsupported claim【7†L8-L9】.",
+            "Supported claim[1]; unsupported claim.",
+        ),
+    ],
+)
+def test_model_style_citations_are_normalized_and_validated(
+    monkeypatch,
+    model_answer,
+    expected,
+):
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    monkeypatch.setenv("GROQ_MODEL", "test-model")
+
+    class FakeCompletions:
+        def create(self, **kwargs):
+            return SimpleNamespace(
+                choices=[
+                    SimpleNamespace(
+                        message=SimpleNamespace(content=model_answer)
+                    )
+                ]
+            )
+
+    class FakeGroq:
+        def __init__(self, api_key):
+            self.chat = SimpleNamespace(
+                completions=FakeCompletions()
+            )
+
+    monkeypatch.setattr(answer_generator, "Groq", FakeGroq)
+
+    chunks = [
+        {
+            "filename": "machine_learning.txt",
+            "page": 1,
+            "chunk_id": 1,
+            "text": "Supervised learning uses labeled data.",
+        }
+    ]
+
+    answer = generate_answer("What is supervised learning?", chunks)
+
+    assert answer == expected

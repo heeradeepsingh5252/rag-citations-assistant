@@ -1,3 +1,5 @@
+import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
@@ -16,29 +18,77 @@ from src.app.document_loader import DocumentIngestionError, extract_document
 from src.app.search import search_chunks
 from src.app.store import get_chunks, save_chunks
 
-app = FastAPI(title=APP_NAME)
-STATIC_DIR = Path(__file__).resolve().parents[2] / "static"
+logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize the application on startup."""
+    preload_sample_document()
+    yield
+
+app = FastAPI(title=APP_NAME, lifespan=lifespan)
+
+PROJECT_DIR = Path(__file__).resolve().parents[2]
+STATIC_DIR = PROJECT_DIR / "static"
+SAMPLE_DOCUMENT = PROJECT_DIR / "data" / "machine_learning.txt"
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-
 @app.get("/", include_in_schema=False)
 def home() -> FileResponse:
+    """Serve the web interface."""
     return FileResponse(STATIC_DIR / "index.html")
 
+def preload_sample_document() -> None:
+    """Load the sample document when the in-memory store is empty."""
+    if get_chunks():
+        logger.info("Document store already contains chunks; skipping preload.")
+        return
+
+    if not SAMPLE_DOCUMENT.is_file():
+        logger.warning(
+            "Sample document not found at %s. "
+            "Users must upload a document manually.",
+            SAMPLE_DOCUMENT,
+        )
+        return
+
+    try:
+        pages = extract_document(
+            SAMPLE_DOCUMENT.name,
+            SAMPLE_DOCUMENT.read_bytes(),
+        )
+    except (OSError, DocumentIngestionError):
+        logger.exception("Failed to preload the sample document.")
+        return
+
+    chunks = chunk_pages(pages)
+
+    if not chunks:
+        logger.warning("Sample document produced no chunks.")
+        return
+
+    save_chunks(chunks, filename=SAMPLE_DOCUMENT.name)
+
+    logger.info(
+        "Preloaded %s: %d page(s), %d chunk(s).",
+        SAMPLE_DOCUMENT.name,
+        len(pages),
+        len(chunks),
+    )
 
 class QueryRequest(BaseModel):
     question: str = Field(min_length=1, max_length=1000)
     top_k: int = Field(default=3, ge=1, le=10)
 
-
 @app.get("/health")
 def health() -> dict:
+    """Return application health and configured name."""
     return {"status": "ok", "app": APP_NAME}
-
 
 @app.post("/documents/ingest")
 async def ingest_document(file: Annotated[UploadFile, File()]) -> dict:
+    """Extract an uploaded PDF or TXT document and store its chunks."""
     filename = file.filename or ""
 
     if not filename.lower().endswith((".pdf", ".txt")):
@@ -47,18 +97,22 @@ async def ingest_document(file: Annotated[UploadFile, File()]) -> dict:
             detail="Unsupported file type. Upload a PDF or TXT file.",
         )
 
-    content = await file.read()
-
-    if len(content) > 10 * 1024 * 1024:
-        raise HTTPException(
-            status_code=413,
-            detail="File exceeds the 10 MB limit.",
-        )
-
     try:
-        pages = extract_document(filename, content)
-    except DocumentIngestionError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        content = await file.read()
+
+        if len(content) > 10 * 1024 * 1024:
+            raise HTTPException(
+                status_code=413,
+                detail="File exceeds the 10 MB limit.",
+            )
+
+        try:
+            pages = extract_document(filename, content)
+        except DocumentIngestionError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=str(exc),
+            ) from exc
     finally:
         await file.close()
 
@@ -73,9 +127,9 @@ async def ingest_document(file: Annotated[UploadFile, File()]) -> dict:
         "chunks": chunks,
     }
 
-
 @app.post("/documents/query")
 def query_documents(request: QueryRequest) -> dict:
+    """Retrieve relevant document chunks and generate a cited answer."""
     question = request.question.strip()
 
     if not question:
@@ -99,8 +153,11 @@ def query_documents(request: QueryRequest) -> dict:
             ),
         }
 
-    results = search_chunks(question, chunks, top_k=request.top_k)
-
+    results = search_chunks(
+        question,
+        chunks,
+        top_k=request.top_k,
+    )
 
     cited_results = []
     citations = []
@@ -136,13 +193,13 @@ def query_documents(request: QueryRequest) -> dict:
 
     try:
         answer = generate_answer(question, cited_results)
-
     except RuntimeError as exc:
         raise HTTPException(
             status_code=503,
             detail=str(exc),
         ) from exc
     except Exception as exc:
+        logger.exception("Answer generation failed.")
         raise HTTPException(
             status_code=502,
             detail=(
