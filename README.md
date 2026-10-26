@@ -4,6 +4,16 @@ A Retrieval-Augmented Generation (RAG) application that answers questions about 
 
 Built with Python, FastAPI, Sentence Transformers, and Groq.
 
+## Live Demo
+
+- **Interactive API documentation:** https://rag-citations-assistant.onrender.com/docs
+- **Health check:** https://rag-citations-assistant.onrender.com/health
+- **Source code:** https://github.com/heeradeepsingh5252/rag-citations-assistant
+
+Note: The API uses in-memory document storage, so upload the sample
+document before testing questions. The free hosting tier may take
+longer to respond after periods of inactivity.
+
 ## Features
 
 - **Document ingestion:** Upload PDF and TXT documents through a REST API.
