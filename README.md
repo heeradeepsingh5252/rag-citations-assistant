@@ -302,7 +302,7 @@ A result of `possible_support` means the text passed the current heuristic. It i
 - **Retrieval quality:** Evaluate alternative chunking strategies, hybrid search, and reranking.
 - **Verification quality:** Implement stronger claim-level semantic verification and contradiction detection.
 - **Formal evaluation:** Measure retrieval with Precision@k, Recall@k, and MRR on a labeled dataset. Evaluate answer faithfulness and citation correctness against reviewed examples.
-- **Production reliability:** Add structured logging, monitoring, rate limiting, and robust API error handling.
+- **Production reliability:** Add structured logging and monitoring; replace the in-memory rate limiter with a shared store for multi-instance deployments.
 - **Security:** Add authentication and appropriate controls if the application is opened to unrestricted public use.
 - **Frontend improvements:** Add document management, richer citation navigation, and clearer error states.
 
