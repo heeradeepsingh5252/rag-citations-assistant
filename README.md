@@ -258,7 +258,7 @@ The script makes Gemini embedding API requests. Review API usage before running 
 
 ### Verified Development Results
 
-- **36 automated tests passed** in the latest local test run.
+- **40 automated tests passed** in the latest local test run.
 - Ruff reported no issues in the latest reported lint check.
 - The live deployment successfully ingested a sample document, retrieved relevant passages, generated an answer, and returned citation-verification metadata.
 - The public web interface successfully completed an upload and question-answering workflow.
