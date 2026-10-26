@@ -11,7 +11,7 @@ Built with Python, FastAPI, Google Gemini Embedding API, and Groq. Deployed on R
 - **Health check:** https://rag-citations-assistant.onrender.com/health
 - **Source code:** https://github.com/heeradeepsingh5252/rag-citations-assistant
 
-The free hosting tier may take longer to respond after inactivity. Uploaded documents are stored in memory, so they may need to be uploaded again after a server restart.
+The free hosting tier may take longer to respond after inactivity. The sample document is preloaded at startup when the in-memory store is empty. Uploaded documents are stored in memory and may need to be uploaded again after a server restart.
 
 ## Features
 
@@ -53,7 +53,7 @@ flowchart TD
 
 1. A user uploads a PDF or text document through the web interface or API.
 2. FastAPI extracts the text, splits it into chunks, and stores the chunks with source metadata.
-3. When a question arrives, the application sends the question and document chunks to Gemini to generate embeddings.
+3. When a question arrives, the application generates a Gemini query embedding and reuses cached document embeddings for identical chunk-text batches when available.
 4. The application compares normalized vectors using cosine similarity and selects the most relevant passages.
 5. Groq generates an answer using the retrieved passages and numeric citation references.
 6. The application extracts valid citations and applies a lexical heuristic to estimate source support.
@@ -246,14 +246,24 @@ Check Git changes for whitespace errors:
 git diff --check
 ```
 
+### Retrieval Evaluation
+
+Run the sample-document retrieval benchmark:
+
+```bash
+PYTHONPATH=. .venv/bin/python evaluation/evaluate_retrieval.py
+```
+
+The script makes Gemini embedding API requests. Review API usage before running it repeatedly.
+
 ### Verified Development Results
 
-- **32 automated tests passed** in the latest reported test run.
+- **36 automated tests passed** in the latest local test run.
 - Ruff reported no issues in the latest reported lint check.
 - The live deployment successfully ingested a sample document, retrieved relevant passages, generated an answer, and returned citation-verification metadata.
 - The public web interface successfully completed an upload and question-answering workflow.
 
-These results are functional checks, not a formal benchmark of retrieval accuracy or answer faithfulness.
+The retrieval evaluation also passed 5/5 evidence-retrieval checks and 10/10 out-of-scope rejection checks on the current 15-question, single-document benchmark using a 0.65 similarity threshold. These results describe this small benchmark only and do not establish general retrieval accuracy or answer faithfulness.
 
 ## Design Decisions and Trade-offs
 
@@ -267,7 +277,7 @@ The trade-off is dependence on network connectivity, API availability, usage lim
 
 Document and query embeddings are normalized before similarity scoring. This makes dot-product similarity equivalent to cosine similarity for the normalized vectors.
 
-The current implementation generates document-chunk embeddings during each query rather than persisting them. This is simple for a small demonstration dataset but adds API calls, latency, and cost as the document collection grows.
+The application generates document-chunk embeddings through Gemini and caches identical text batches in process memory using an LRU cache of up to 16 batches. This reduces repeated embedding requests for unchanged batches. The cache resets when the process restarts and is not a persistent vector index. Larger collections would benefit from a persistent vector store and durable chunk-level embeddings.
 
 ### In-Memory Document Storage
 
